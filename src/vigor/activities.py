@@ -29,15 +29,7 @@ def _num(v):
         return float(v)
     except ValueError:
         return None
-
-
-def _to_meters(km):
-    # Strava's export puts distance in km or meters depending on the column;
-    # a value over 1000 is already meters.
-    if km is None:
-        return None
-    return km if km > 1000 else km * 1000
-
+    
 
 _ISO = re.compile(r"^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})")
 _DATE_FMTS = ("%b %d, %Y, %I:%M:%S %p", "%B %d, %Y, %I:%M:%S %p",
@@ -84,7 +76,7 @@ def load_activities(csv_path):
         acts = []
         for r in reader:
             g = lambda k: (r.get(C[k]) if C[k] else None)
-            meters = _to_meters(_num(g("dist")))
+            meters = _num(g("dist"))
             moving = _num(g("moving"))
             acts.append({
                 "id": (g("id") or "").strip(),
