@@ -4,19 +4,12 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
+from vigor.paths import data_dir
 
 MI = 1609.344
 KM = 1000.0
 
 
-def find_csv(start=None):
-    """Walk up from start (or CWD) looking for activities.csv."""
-    start = Path(start or os.getcwd()).resolve()
-    for d in (start, *start.parents):
-        p = d / "activities.csv"
-        if p.exists():
-            return p
-    return None
 
 
 def _num(v):

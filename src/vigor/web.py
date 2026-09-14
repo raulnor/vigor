@@ -7,10 +7,11 @@ from pathlib import Path
 
 from flask import Flask, render_template_string
 
-from vigor.activities import MI, find_csv, load_activities
+from vigor.activities import load_activities
+from vigor.paths import data_dir
 
 app = Flask(__name__)
-
+print(__name__)
 
 def _serialize(acts):
     out = []
@@ -34,9 +35,9 @@ def _serialize(acts):
 
 @app.get("/")
 def index():
-    path = app.config.get("CSV_PATH") or find_csv()
+    path = data_dir() / "activities.csv"
     if not path or not Path(path).exists():
-        return render_template_string(EMPTY, cwd=os.getcwd())
+        return render_template_string(EMPTY, path=path)
     acts = load_activities(path)
     data = json.dumps(_serialize(acts)).replace("<", "\\u003c")
     return render_template_string(PAGE, data_json=data, n=len(acts), path=str(path))
@@ -46,11 +47,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="vigor web")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=5006)
-    ap.add_argument("--csv", default=None,
-                    help="Path to activities.csv (default: search up from CWD)")
     ap.add_argument("--debug", action="store_true")
     args = ap.parse_args(argv)
-    app.config["CSV_PATH"] = args.csv
     print(f"vigor.web: http://{args.host}:{args.port}", file=sys.stderr)
     if args.debug:
         app.run(host=args.host, port=args.port, debug=True)
@@ -66,9 +64,10 @@ if __name__ == "__main__":
 
 EMPTY = """<!doctype html><meta charset=utf-8><title>vigor</title>
 <body style="font-family:system-ui;max-width:640px;margin:4rem auto;color:#1a1815">
-<h1 style="font-weight:600">No activities.csv found</h1>
-<p style="color:#6e6a63">Searched up from <code>{{ cwd }}</code>. Drop your Strava export's
-<code>activities.csv</code> in the repo, or start with <code>vigor web --csv /path/to/activities.csv</code>.</p>
+<h1 style="font-weight:600">No activities.csv found.</h1>
+<p style="color:#6e6a63">
+  Checked the following location: <code>{{ path }}</code>
+</p>
 """
 
 PAGE = r"""<!doctype html>
