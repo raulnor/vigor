@@ -11,7 +11,6 @@ from vigor.activities import load_activities
 from vigor.paths import data_dir
 
 app = Flask(__name__)
-print(__name__)
 
 def _serialize(acts):
     out = []
