@@ -60,13 +60,32 @@ def _serialize(acts):
             "elev_m": a["elev_m"],
             "ahr": a["ahr"],
             "pace_s_per_m": a["pace_s_per_m"],
+            "race": a["race"],
             "ts": (d - d.__class__(1970, 1, 1)).total_seconds() * 1000 if d else None,
             "year": d.year if d else None,
             "date_str": d.strftime("%b %d, %Y") if d else "\u2014",
         })
     return out
 
+def _load_race_ids():
+    """Load race activity IDs from races.txt if it exists."""
+    races_file = data_dir() / "races.txt"
+    if not races_file.exists():
+        return set()
+
+    race_ids = set()
+    with open(races_file, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            # Skip empty lines and comments
+            if line and not line.startswith('#'):
+                race_ids.add(line)
+    return race_ids
+
 def load_activities(csv_path):
+    # Load race IDs from races.txt (scraped from Strava web interface)
+    race_ids = _load_race_ids()
+
     with open(csv_path, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         fn = reader.fieldnames or []
@@ -85,8 +104,13 @@ def load_activities(csv_path):
             g = lambda k: (r.get(C[k]) if C[k] else None)
             meters = _num(g("dist"))
             moving = _num(g("moving"))
+            activity_id = (g("id") or "").strip()
+
+            # Check if this activity is in the scraped races list
+            is_race = activity_id in race_ids
+
             acts.append({
-                "id": (g("id") or "").strip(),
+                "id": activity_id,
                 "date": _parse_date(g("date")),
                 "name": (g("name") or "").strip() or "(untitled)",
                 "type": (g("type") or "").strip() or "\u2014",
@@ -95,6 +119,7 @@ def load_activities(csv_path):
                 "elev_m": _num(g("elev")),
                 "ahr": _num(g("ahr")),
                 "pace_s_per_m": (moving / meters) if (meters and moving) else None,
+                "race": is_race,
             })
     acts.sort(key=lambda a: (a["date"] is not None, a["date"] or datetime.min), reverse=True)
     return _serialize(acts)

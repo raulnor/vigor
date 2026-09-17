@@ -132,6 +132,7 @@ PAGE = r"""<!doctype html>
    <input class="search" id="q" type="search" placeholder="Search name or type…" autocomplete="off">
    <select id="ftype"><option value="">All types</option></select>
    <select id="fyear"><option value="">All years</option></select>
+   <select id="ftag"><option value="">All activities</option><option value="race">Races only</option></select>
    <div class="toggle" role="group" aria-label="Distance unit">
      <button id="umi" aria-pressed="true">mi</button><button id="ukm" aria-pressed="false">km</button>
    </div>
@@ -163,8 +164,9 @@ const COLS=[
 ];
 
 function currentRows(){
- const q=$("q").value.trim().toLowerCase(),ft=$("ftype").value,fy=$("fyear").value;
+ const q=$("q").value.trim().toLowerCase(),ft=$("ftype").value,fy=$("fyear").value,ftag=$("ftag").value;
  let rows=ALL.filter(a=>{ if(ft&&a.type!==ft)return false; if(fy&&String(a.year)!==fy)return false;
+   if(ftag==="race"&&!a.race)return false;
    if(q&&!(a.name.toLowerCase().includes(q)||a.type.toLowerCase().includes(q)))return false; return true; });
  const c=COLS.find(c=>c.key===sortKey)||COLS[0];
  rows.sort((a,b)=>{const x=c.val(a),y=c.val(b);return x<y?-sortDir:x>y?sortDir:0;});
@@ -207,7 +209,7 @@ function renderBars(rows){
  $("ftype").innerHTML=`<option value="">All types</option>`+types.map(t=>`<option>${esc(t)}</option>`).join("");
  const years=[...new Set(ALL.map(a=>a.year).filter(Boolean))].sort((a,b)=>b-a);
  $("fyear").innerHTML=`<option value="">All years</option>`+years.map(y=>`<option>${y}</option>`).join("");
- $("q").oninput=render;$("ftype").onchange=render;$("fyear").onchange=render;
+ $("q").oninput=render;$("ftype").onchange=render;$("fyear").onchange=render;$("ftag").onchange=render;
  const su=u=>{unit=u;$("umi").setAttribute("aria-pressed",u==="mi");$("ukm").setAttribute("aria-pressed",u==="km");render();};
  $("umi").onclick=()=>su("mi");$("ukm").onclick=()=>su("km");
  render();

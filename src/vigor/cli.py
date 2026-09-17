@@ -11,6 +11,8 @@ def main(argv=None):
                    add_help=False).set_defaults(run=web.main)
     sub.add_parser("path", help="Print vigor's data directory",
                    add_help=False).set_defaults(run=lambda _: print(paths.data_dir()))
+    sub.add_parser("scrape-races", help="Scrape race-tagged activities from Strava",
+                   add_help=False).set_defaults(run=lambda _: __import__('vigor.strava_scraper', fromlist=['main']).main())
 
     args, rest = parser.parse_known_args(argv)
     if not hasattr(args, 'run'):
