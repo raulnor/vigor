@@ -1,35 +1,16 @@
 """Local web view over the Strava export."""
 import argparse
+import csv
 import json
-import os
 import sys
 from pathlib import Path
 
 from flask import Flask, render_template_string
 
-from vigor.activities import load_activities
+from vigor.db import load_activities, load_shoes
 from vigor.paths import data_dir
 
 app = Flask(__name__)
-
-def _serialize(acts):
-    out = []
-    for a in acts:
-        d = a["date"]
-        out.append({
-            "id": a["id"],
-            "name": a["name"],
-            "type": a["type"],
-            "meters": a["meters"],
-            "moving": a["moving"],
-            "elev_m": a["elev_m"],
-            "ahr": a["ahr"],
-            "pace_s_per_m": a["pace_s_per_m"],
-            "ts": (d - d.__class__(1970, 1, 1)).total_seconds() * 1000 if d else None,
-            "year": d.year if d else None,
-            "date_str": d.strftime("%b %d, %Y") if d else "\u2014",
-        })
-    return out
 
 
 @app.get("/")
@@ -38,8 +19,20 @@ def index():
     if not path or not Path(path).exists():
         return render_template_string(EMPTY, path=path)
     acts = load_activities(path)
-    data = json.dumps(_serialize(acts)).replace("<", "\\u003c")
+    data = json.dumps(acts).replace("<", "\\u003c")
     return render_template_string(PAGE, data_json=data, n=len(acts), path=str(path))
+
+
+@app.get("/shoes")
+def shoes():
+    path = data_dir() / "activities.csv"
+    if not path or not Path(path).exists():
+        return render_template_string(EMPTY, path=path)
+    shoes_data = load_shoes(path)
+    # Sort by newest workout (most recent first), with None values at the end
+    shoes_data.sort(key=lambda s: s["newest"] or "", reverse=True)
+    data_json = json.dumps(shoes_data).replace("<", "\\u003c")
+    return render_template_string(SHOES_PAGE, data_json=data_json, n=len(shoes_data))
 
 
 def main(argv=None):
@@ -81,8 +74,12 @@ PAGE = r"""<!doctype html>
  *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);
    font-family:var(--ui);font-size:14px;padding:0 clamp(16px,4vw,48px) 96px}
  .wrap{max-width:1080px;margin:0 auto}
+ .nav{display:flex;gap:24px;padding:20px 0 0;border-bottom:1px solid var(--rule);margin-bottom:20px}
+ .nav a{color:var(--muted);text-decoration:none;padding:10px 0;border-bottom:2px solid transparent;font-size:13px;font-weight:500}
+ .nav a:hover{color:var(--accent)}
+ .nav a.active{color:var(--ink);border-bottom-color:var(--accent)}
  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
-   padding:40px 0 20px;border-bottom:1px solid var(--rule-s);flex-wrap:wrap}
+   padding:20px 0;border-bottom:1px solid var(--rule-s);flex-wrap:wrap}
  .mark{font-family:var(--serif);font-size:clamp(26px,4vw,34px);font-weight:600;line-height:1}
  .mark small{display:block;font-family:var(--ui);font-weight:400;font-size:12px;color:var(--faint);margin-top:8px}
  .readout{display:grid;grid-template-columns:auto 1fr;gap:clamp(20px,5vw,56px);
@@ -120,6 +117,10 @@ PAGE = r"""<!doctype html>
  @media (max-width:640px){.readout{grid-template-columns:1fr}.c-hide{display:none}}
 </style></head>
 <body><div class="wrap">
+ <nav class="nav">
+   <a href="/" class="active">Activities</a>
+   <a href="/shoes">Shoes</a>
+ </nav>
  <header class="top">
    <div class="mark">Runs<small>{{ n }} activities · {{ path }}</small></div>
  </header>
@@ -211,6 +212,105 @@ function renderBars(rows){
  $("umi").onclick=()=>su("mi");$("ukm").onclick=()=>su("km");
  render();
 })();
+</script>
+</body></html>
+"""
+
+SHOES_PAGE = r"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vigor — shoes</title>
+<style>
+ :root{--paper:#FBFAF8;--ink:#1A1815;--muted:#6E6A63;--faint:#9A968E;
+   --rule:#E8E4DC;--rule-s:#D6D0C6;--accent:#295A6B;--accent-soft:rgba(41,90,107,.09);
+   --serif:"Iowan Old Style",Charter,Palatino,Georgia,serif;
+   --ui:-apple-system,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;}
+ *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);
+   font-family:var(--ui);font-size:14px;padding:0 clamp(16px,4vw,48px) 96px}
+ .wrap{max-width:1080px;margin:0 auto}
+ .nav{display:flex;gap:24px;padding:20px 0 0;border-bottom:1px solid var(--rule);margin-bottom:20px}
+ .nav a{color:var(--muted);text-decoration:none;padding:10px 0;border-bottom:2px solid transparent;font-size:13px;font-weight:500}
+ .nav a:hover{color:var(--accent)}
+ .nav a.active{color:var(--ink);border-bottom-color:var(--accent)}
+ .top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
+   padding:20px 0;border-bottom:1px solid var(--rule-s);flex-wrap:wrap}
+ .mark{font-family:var(--serif);font-size:clamp(26px,4vw,34px);font-weight:600;line-height:1}
+ .mark small{display:block;font-family:var(--ui);font-weight:400;font-size:12px;color:var(--faint);margin-top:8px}
+ .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:18px 0}
+ .toggle{display:inline-flex;border:1px solid var(--rule-s);border-radius:2px;overflow:hidden}
+ .toggle button{font:inherit;font-size:12.5px;color:var(--muted);background:#fff;border:0;padding:8px 12px;cursor:pointer}
+ .toggle button[aria-pressed="true"]{background:var(--accent);color:#fff}
+ .tablewrap{overflow-x:auto}
+ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+ thead th{text-align:left;font-weight:500;font-size:11.5px;color:var(--muted);
+   padding:9px 12px 9px 0;border-bottom:1px solid var(--rule-s);white-space:nowrap}
+ thead th.num{text-align:right;padding-right:12px}
+ tbody td{padding:12px 12px 12px 0;border-bottom:1px solid var(--rule);font-size:13px}
+ td.num{text-align:right;padding-right:12px;color:#33302B}
+ td.brand{color:var(--muted);font-size:12px}
+ tbody tr:hover{background:var(--accent-soft)}
+</style></head>
+<body><div class="wrap">
+ <nav class="nav">
+   <a href="/">Activities</a>
+   <a href="/shoes" class="active">Shoes</a>
+ </nav>
+ <header class="top">
+   <div class="mark">Shoes<small>{{ n }} shoes tracked</small></div>
+ </header>
+ <section class="controls">
+   <div class="toggle" role="group" aria-label="Distance unit">
+     <button id="umi" aria-pressed="true">mi</button><button id="ukm" aria-pressed="false">km</button>
+   </div>
+ </section>
+ <div class="tablewrap">
+   <table>
+     <thead><tr>
+       <th>Shoe</th>
+       <th class="num">Distance</th>
+       <th class="num">Activities</th>
+       <th class="num">Oldest</th>
+       <th class="num">Newest</th>
+     </tr></thead>
+     <tbody id="tbody"></tbody>
+   </table>
+ </div>
+</div>
+<script>
+"use strict";
+const DATA = {{ data_json|safe }};
+const MI=1609.344, KM=1000;
+let unit="mi";
+const $=id=>document.getElementById(id);
+const commas=n=>n.toLocaleString(undefined,{maximumFractionDigits:0});
+
+function fmtDate(iso){
+  if(!iso)return "—";
+  const d=new Date(iso);
+  const mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
+  return `${mon} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+function render(){
+  const div=unit==="mi"?MI:KM;
+  const rows=DATA.map(s=>{
+    const dist=(s.meters/div).toFixed(0);
+    return `<tr>
+      <td>${esc(s.name)}</td>
+      <td class="num">${commas(dist)} ${unit}</td>
+      <td class="num">${commas(s.count)}</td>
+      <td class="num">${fmtDate(s.oldest)}</td>
+      <td class="num">${fmtDate(s.newest)}</td>
+    </tr>`;
+  }).join("");
+  $("tbody").innerHTML=rows;
+}
+
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const su=u=>{unit=u;$("umi").setAttribute("aria-pressed",u==="mi");$("ukm").setAttribute("aria-pressed",u==="km");render();};
+$("umi").onclick=()=>su("mi");
+$("ukm").onclick=()=>su("km");
+render();
 </script>
 </body></html>
 """
