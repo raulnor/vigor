@@ -24,7 +24,7 @@ _DATE_FMTS = ("%b %d, %Y, %I:%M:%S %p", "%B %d, %Y, %I:%M:%S %p",
               "%Y-%m-%d %H:%M:%S", "%Y-%m-%d")
 
 
-def _parse_date(s):
+def parse_date(s):
     if not s:
         return None
     s = s.strip()

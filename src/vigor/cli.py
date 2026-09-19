@@ -11,8 +11,10 @@ def main(argv=None):
                    add_help=False).set_defaults(run=web.main)
     sub.add_parser("path", help="Print vigor's data directory",
                    add_help=False).set_defaults(run=lambda _: print(paths.data_dir()))
-    sub.add_parser("scrape-races", help="Scrape race-tagged activities from Strava",
-                   add_help=False).set_defaults(run=lambda _: __import__('vigor.strava_scraper', fromlist=['main']).main())
+    sub.add_parser("update-races", help="Update races.txt from Strava race tags",
+                   add_help=False).set_defaults(run=lambda _: __import__('vigor.strava_scraper', fromlist=['update_races']).update_races())
+    sub.add_parser("update-activities", help="Update activities.csv from Strava (incremental)",
+                   add_help=False).set_defaults(run=lambda _: __import__('vigor.strava_scraper', fromlist=['update_activities']).update_activities())
 
     args, rest = parser.parse_known_args(argv)
     if not hasattr(args, 'run'):
