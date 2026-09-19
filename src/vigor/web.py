@@ -65,6 +65,56 @@ if __name__ == "__main__":
     sys.exit(main())
 
 
+SHARED_CSS = """
+ :root{--paper:#FBFAF8;--ink:#1A1815;--muted:#6E6A63;--faint:#9A968E;
+   --rule:#E8E4DC;--rule-s:#D6D0C6;--accent:#295A6B;--accent-soft:rgba(41,90,107,.09);
+   --input-bg:#fff;--card-bg:#fff;
+   --serif:"Iowan Old Style",Charter,Palatino,Georgia,serif;
+   --ui:-apple-system,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;}
+ @media (prefers-color-scheme: dark){
+   :root{--paper:#1A1815;--ink:#F5F3F0;--muted:#A8A39A;--faint:#6E6A63;
+     --rule:#2D2925;--rule-s:#3A3530;--accent:#4A8BA0;--accent-soft:rgba(74,139,160,.15);
+     --input-bg:#252220;--card-bg:#252220;}
+ }
+ *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);
+   font-family:var(--ui);font-size:14px;padding:0 clamp(16px,4vw,48px) 96px}
+ .wrap{max-width:1080px;margin:0 auto}
+ .nav{display:flex;gap:24px;padding:20px 0 0;border-bottom:1px solid var(--rule);margin-bottom:20px}
+ .nav a{color:var(--muted);text-decoration:none;padding:10px 0;border-bottom:2px solid transparent;font-size:13px;font-weight:500}
+ .nav a:hover{color:var(--accent)}
+ .nav a.active{color:var(--ink);border-bottom-color:var(--accent)}
+ .top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
+   padding:20px 0;border-bottom:1px solid var(--rule-s);flex-wrap:wrap}
+ .mark{font-family:var(--serif);font-size:clamp(26px,4vw,34px);font-weight:600;line-height:1}
+ .mark small{display:block;font-family:var(--ui);font-weight:400;font-size:12px;color:var(--faint);margin-top:8px}
+ .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:18px 0}
+ .search{flex:1 1 220px;min-width:160px;font:inherit;font-size:13px;background:var(--input-bg);
+   border:1px solid var(--rule-s);border-radius:2px;padding:8px 11px;color:var(--ink)}
+ select{font:inherit;font-size:13px;background:var(--input-bg);border:1px solid var(--rule-s);
+   border-radius:2px;padding:8px 9px;color:var(--ink);cursor:pointer}
+ .search:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+ .toggle{display:inline-flex;border:1px solid var(--rule-s);border-radius:2px;overflow:hidden}
+ .toggle button{font:inherit;font-size:12.5px;color:var(--muted);background:var(--input-bg);border:0;padding:8px 12px;cursor:pointer}
+ .toggle button[aria-pressed="true"]{background:var(--accent);color:var(--paper)}
+ .tablewrap{overflow-x:auto}
+ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+ thead th{text-align:left;font-weight:500;font-size:11.5px;color:var(--muted);
+   padding:9px 12px 9px 0;border-bottom:1px solid var(--rule-s);white-space:nowrap;cursor:pointer;user-select:none}
+ thead th.num{text-align:right;padding-right:12px}
+ th .car{color:var(--accent);font-size:10px;margin-left:3px;visibility:hidden}
+ th[aria-sort] .car{visibility:visible}
+ th[aria-sort="ascending"] .car::after{content:"\\25B2"}
+ th[aria-sort="descending"] .car::after{content:"\\25BC"}
+ tbody td{padding:8px 12px 8px 0;border-bottom:1px solid var(--rule);font-size:13px;white-space:nowrap}
+ td.num{text-align:right;padding-right:12px;color:var(--ink)}
+ td.dim{color:var(--faint)}
+ td.name{white-space:normal;min-width:200px;max-width:340px}
+ tbody tr:hover{background:var(--accent-soft)}
+ td.name a{color:var(--ink);text-decoration:none;border-bottom:1px solid transparent}
+ td.name a:hover{border-bottom-color:var(--accent);color:var(--accent)}
+ .type-tag{font-size:12px;color:var(--muted)}
+"""
+
 EMPTY = """<!doctype html><meta charset=utf-8><title>vigor</title>
 <body style="font-family:system-ui;max-width:640px;margin:4rem auto;color:#1a1815">
 <h1 style="font-weight:600">No activities.csv found.</h1>
@@ -77,54 +127,13 @@ PAGE = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>vigor — runs</title>
-<style>
- :root{--paper:#FBFAF8;--ink:#1A1815;--muted:#6E6A63;--faint:#9A968E;
-   --rule:#E8E4DC;--rule-s:#D6D0C6;--accent:#295A6B;--accent-soft:rgba(41,90,107,.09);
-   --serif:"Iowan Old Style",Charter,Palatino,Georgia,serif;
-   --ui:-apple-system,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;}
- *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);
-   font-family:var(--ui);font-size:14px;padding:0 clamp(16px,4vw,48px) 96px}
- .wrap{max-width:1080px;margin:0 auto}
- .nav{display:flex;gap:24px;padding:20px 0 0;border-bottom:1px solid var(--rule);margin-bottom:20px}
- .nav a{color:var(--muted);text-decoration:none;padding:10px 0;border-bottom:2px solid transparent;font-size:13px;font-weight:500}
- .nav a:hover{color:var(--accent)}
- .nav a.active{color:var(--ink);border-bottom-color:var(--accent)}
- .top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
-   padding:20px 0;border-bottom:1px solid var(--rule-s);flex-wrap:wrap}
- .mark{font-family:var(--serif);font-size:clamp(26px,4vw,34px);font-weight:600;line-height:1}
- .mark small{display:block;font-family:var(--ui);font-weight:400;font-size:12px;color:var(--faint);margin-top:8px}
+<style>""" + SHARED_CSS + r"""
  .readout{display:grid;grid-template-columns:auto 1fr;gap:clamp(20px,5vw,56px);
    align-items:center;padding:22px 0 26px;border-bottom:1px solid var(--rule)}
  .stats{display:flex;gap:clamp(20px,4vw,44px);flex-wrap:wrap}
  .stat .n{font-family:var(--serif);font-size:clamp(20px,3vw,28px);line-height:1;font-variant-numeric:tabular-nums}
  .stat .k{font-size:11.5px;color:var(--faint);margin-top:6px}
  .bars svg{display:block;width:100%;height:64px;overflow:visible}
- .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:18px 0}
- .search{flex:1 1 220px;min-width:160px;font:inherit;font-size:13px;background:#fff;
-   border:1px solid var(--rule-s);border-radius:2px;padding:8px 11px;color:var(--ink)}
- select{font:inherit;font-size:13px;background:#fff;border:1px solid var(--rule-s);
-   border-radius:2px;padding:8px 9px;color:var(--ink);cursor:pointer}
- .search:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
- .toggle{display:inline-flex;border:1px solid var(--rule-s);border-radius:2px;overflow:hidden}
- .toggle button{font:inherit;font-size:12.5px;color:var(--muted);background:#fff;border:0;padding:8px 12px;cursor:pointer}
- .toggle button[aria-pressed="true"]{background:var(--accent);color:#fff}
- .tablewrap{overflow-x:auto}
- table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
- thead th{text-align:left;font-weight:500;font-size:11.5px;color:var(--muted);
-   padding:9px 12px 9px 0;border-bottom:1px solid var(--rule-s);white-space:nowrap;cursor:pointer;user-select:none}
- thead th.num{text-align:right;padding-right:12px}
- th .car{color:var(--accent);font-size:10px;margin-left:3px;visibility:hidden}
- th[aria-sort] .car{visibility:visible}
- th[aria-sort="ascending"] .car::after{content:"\25B2"}
- th[aria-sort="descending"] .car::after{content:"\25BC"}
- tbody td{padding:8px 12px 8px 0;border-bottom:1px solid var(--rule);font-size:13px;white-space:nowrap}
- td.num{text-align:right;padding-right:12px;color:#33302B}
- td.dim{color:var(--faint)}
- td.name{white-space:normal;min-width:200px;max-width:340px}
- tbody tr:hover{background:var(--accent-soft)}
- td.name a{color:var(--ink);text-decoration:none;border-bottom:1px solid transparent}
- td.name a:hover{border-bottom-color:var(--accent);color:var(--accent)}
- .type-tag{font-size:12px;color:var(--muted)}
  @media (max-width:640px){.readout{grid-template-columns:1fr}.c-hide{display:none}}
 </style></head>
 <body><div class="wrap">
@@ -233,35 +242,9 @@ SHOES_PAGE = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>vigor — shoes</title>
-<style>
- :root{--paper:#FBFAF8;--ink:#1A1815;--muted:#6E6A63;--faint:#9A968E;
-   --rule:#E8E4DC;--rule-s:#D6D0C6;--accent:#295A6B;--accent-soft:rgba(41,90,107,.09);
-   --serif:"Iowan Old Style",Charter,Palatino,Georgia,serif;
-   --ui:-apple-system,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;}
- *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);
-   font-family:var(--ui);font-size:14px;padding:0 clamp(16px,4vw,48px) 96px}
- .wrap{max-width:1080px;margin:0 auto}
- .nav{display:flex;gap:24px;padding:20px 0 0;border-bottom:1px solid var(--rule);margin-bottom:20px}
- .nav a{color:var(--muted);text-decoration:none;padding:10px 0;border-bottom:2px solid transparent;font-size:13px;font-weight:500}
- .nav a:hover{color:var(--accent)}
- .nav a.active{color:var(--ink);border-bottom-color:var(--accent)}
- .top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
-   padding:20px 0;border-bottom:1px solid var(--rule-s);flex-wrap:wrap}
- .mark{font-family:var(--serif);font-size:clamp(26px,4vw,34px);font-weight:600;line-height:1}
- .mark small{display:block;font-family:var(--ui);font-weight:400;font-size:12px;color:var(--faint);margin-top:8px}
- .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:18px 0}
- .toggle{display:inline-flex;border:1px solid var(--rule-s);border-radius:2px;overflow:hidden}
- .toggle button{font:inherit;font-size:12.5px;color:var(--muted);background:#fff;border:0;padding:8px 12px;cursor:pointer}
- .toggle button[aria-pressed="true"]{background:var(--accent);color:#fff}
- .tablewrap{overflow-x:auto}
- table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
- thead th{text-align:left;font-weight:500;font-size:11.5px;color:var(--muted);
-   padding:9px 12px 9px 0;border-bottom:1px solid var(--rule-s);white-space:nowrap}
- thead th.num{text-align:right;padding-right:12px}
- tbody td{padding:12px 12px 12px 0;border-bottom:1px solid var(--rule);font-size:13px}
- td.num{text-align:right;padding-right:12px;color:#33302B}
+<style>""" + SHARED_CSS + r"""
+ tbody td{padding:12px 12px 12px 0}
  td.brand{color:var(--muted);font-size:12px}
- tbody tr:hover{background:var(--accent-soft)}
 </style></head>
 <body><div class="wrap">
  <nav class="nav">
@@ -332,26 +315,13 @@ ACTIVITY_DETAIL_PAGE = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>vigor — {{ activity.get('Activity Name', 'Activity') }}</title>
-<style>
- :root{--paper:#FBFAF8;--ink:#1A1815;--muted:#6E6A63;--faint:#9A968E;
-   --rule:#E8E4DC;--rule-s:#D6D0C6;--accent:#295A6B;--accent-soft:rgba(41,90,107,.09);
-   --serif:"Iowan Old Style",Charter,Palatino,Georgia,serif;
-   --ui:-apple-system,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;}
- *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);
-   font-family:var(--ui);font-size:14px;padding:0 clamp(16px,4vw,48px) 96px}
- .wrap{max-width:1080px;margin:0 auto}
- .nav{display:flex;gap:24px;padding:20px 0 0;border-bottom:1px solid var(--rule);margin-bottom:20px}
- .nav a{color:var(--muted);text-decoration:none;padding:10px 0;border-bottom:2px solid transparent;font-size:13px;font-weight:500}
- .nav a:hover{color:var(--accent)}
- .nav a.active{color:var(--ink);border-bottom-color:var(--accent)}
- .top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;
-   padding:20px 0;border-bottom:1px solid var(--rule-s);flex-wrap:wrap}
- .mark{font-family:var(--serif);font-size:clamp(22px,4vw,30px);font-weight:600;line-height:1.2}
- .mark small{display:block;font-family:var(--ui);font-weight:400;font-size:13px;color:var(--muted);margin-top:8px}
- .strava-link{display:inline-block;margin-top:12px;padding:8px 16px;background:var(--accent);color:#fff;text-decoration:none;border-radius:4px;font-size:13px;font-weight:500}
- .strava-link:hover{background:#1e4552}
+<style>""" + SHARED_CSS + r"""
+ .top{align-items:flex-start}
+ .mark{font-size:clamp(22px,4vw,30px);line-height:1.2}
+ .strava-link{display:inline-block;margin-top:12px;padding:8px 16px;background:var(--accent);color:var(--paper);text-decoration:none;border-radius:4px;font-size:13px;font-weight:500}
+ .strava-link:hover{opacity:0.9}
  .field-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;padding:24px 0}
- .field{padding:16px;background:#fff;border:1px solid var(--rule);border-radius:4px}
+ .field{padding:16px;background:var(--card-bg);border:1px solid var(--rule);border-radius:4px}
  .field-label{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
  .field-value{font-size:14px;color:var(--ink);word-break:break-word}
  .field-value.empty{color:var(--faint);font-style:italic}
