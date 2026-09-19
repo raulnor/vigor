@@ -111,7 +111,7 @@ def load_activities(csv_path):
 
             acts.append({
                 "id": activity_id,
-                "date": _parse_date(g("date")),
+                "date": parse_date(g("date")),
                 "name": (g("name") or "").strip() or "(untitled)",
                 "type": (g("type") or "").strip() or "\u2014",
                 "meters": meters,
@@ -123,6 +123,19 @@ def load_activities(csv_path):
             })
     acts.sort(key=lambda a: (a["date"] is not None, a["date"] or datetime.min), reverse=True)
     return _serialize(acts)
+
+
+def load_activity_detail(csv_path, activity_id):
+    """Load all fields for a single activity by ID."""
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row.get("Activity ID", "").strip() == activity_id:
+                # Return all fields as-is, but parse the date
+                activity = dict(row)
+                activity["parsed_date"] = parse_date(row.get("Activity Date", ""))
+                return activity
+    return None
 
 
 def load_shoes(activities_path):
@@ -138,7 +151,7 @@ def load_shoes(activities_path):
 
             # Parse activity date
             date_str = row.get("Activity Date", "").strip()
-            activity_date = _parse_date(date_str)
+            activity_date = parse_date(date_str)
 
             # Initialize shoe entry if not seen before
             if gear not in shoes:

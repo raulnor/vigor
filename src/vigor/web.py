@@ -5,9 +5,9 @@ import json
 import sys
 from pathlib import Path
 
-from flask import Flask, render_template_string
+from flask import Flask, render_template_string, abort
 
-from vigor.db import load_activities, load_shoes
+from vigor.db import load_activities, load_shoes, load_activity_detail
 from vigor.paths import data_dir
 
 app = Flask(__name__)
@@ -33,6 +33,17 @@ def shoes():
     shoes_data.sort(key=lambda s: s["newest"] or "", reverse=True)
     data_json = json.dumps(shoes_data).replace("<", "\\u003c")
     return render_template_string(SHOES_PAGE, data_json=data_json, n=len(shoes_data))
+
+
+@app.get("/activity/<activity_id>")
+def activity_detail(activity_id):
+    path = data_dir() / "activities.csv"
+    if not path or not Path(path).exists():
+        return render_template_string(EMPTY, path=path)
+    activity = load_activity_detail(path, activity_id)
+    if not activity:
+        abort(404)
+    return render_template_string(ACTIVITY_DETAIL_PAGE, activity=activity)
 
 
 def main(argv=None):
@@ -154,7 +165,7 @@ const commas=n=>n.toLocaleString(undefined,{maximumFractionDigits:0});
 
 const COLS=[
  {key:"date",label:"Date",num:false,cls:"",val:a=>a.ts??-Infinity,cell:a=>`<td class="${a.ts?'':'dim'}">${a.date_str}</td>`},
- {key:"name",label:"Activity",num:false,cls:"",val:a=>a.name.toLowerCase(),cell:a=>{const t=esc(a.name);const l=a.id?`https://www.strava.com/activities/${encodeURIComponent(a.id)}`:null;return `<td class="name">${l?`<a href="${l}" target="_blank" rel="noopener">${t}</a>`:t}</td>`;}},
+ {key:"name",label:"Activity",num:false,cls:"",val:a=>a.name.toLowerCase(),cell:a=>{const t=esc(a.name);const l=a.id?`/activity/${encodeURIComponent(a.id)}`:null;return `<td class="name">${l?`<a href="${l}">${t}</a>`:t}</td>`;}},
  {key:"type",label:"Type",num:false,cls:"c-hide",val:a=>a.type.toLowerCase(),cell:a=>`<td class="c-hide"><span class="type-tag">${esc(a.type)}</span></td>`},
  {key:"dist",label:"Dist",num:true,cls:"",val:a=>a.meters??-Infinity,cell:a=>`<td class="num">${a.meters!=null?(a.meters/(unit==="mi"?MI:KM)).toFixed(2):"—"}</td>`},
  {key:"time",label:"Time",num:true,cls:"",val:a=>a.moving??-Infinity,cell:a=>`<td class="num">${fmtTime(a.moving)}</td>`},
@@ -314,5 +325,68 @@ $("umi").onclick=()=>su("mi");
 $("ukm").onclick=()=>su("km");
 render();
 </script>
+</body></html>
+"""
+
+ACTIVITY_DETAIL_PAGE = r"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vigor — {{ activity.get('Activity Name', 'Activity') }}</title>
+<style>
+ :root{--paper:#FBFAF8;--ink:#1A1815;--muted:#6E6A63;--faint:#9A968E;
+   --rule:#E8E4DC;--rule-s:#D6D0C6;--accent:#295A6B;--accent-soft:rgba(41,90,107,.09);
+   --serif:"Iowan Old Style",Charter,Palatino,Georgia,serif;
+   --ui:-apple-system,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;}
+ *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);
+   font-family:var(--ui);font-size:14px;padding:0 clamp(16px,4vw,48px) 96px}
+ .wrap{max-width:1080px;margin:0 auto}
+ .nav{display:flex;gap:24px;padding:20px 0 0;border-bottom:1px solid var(--rule);margin-bottom:20px}
+ .nav a{color:var(--muted);text-decoration:none;padding:10px 0;border-bottom:2px solid transparent;font-size:13px;font-weight:500}
+ .nav a:hover{color:var(--accent)}
+ .nav a.active{color:var(--ink);border-bottom-color:var(--accent)}
+ .top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;
+   padding:20px 0;border-bottom:1px solid var(--rule-s);flex-wrap:wrap}
+ .mark{font-family:var(--serif);font-size:clamp(22px,4vw,30px);font-weight:600;line-height:1.2}
+ .mark small{display:block;font-family:var(--ui);font-weight:400;font-size:13px;color:var(--muted);margin-top:8px}
+ .strava-link{display:inline-block;margin-top:12px;padding:8px 16px;background:var(--accent);color:#fff;text-decoration:none;border-radius:4px;font-size:13px;font-weight:500}
+ .strava-link:hover{background:#1e4552}
+ .field-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;padding:24px 0}
+ .field{padding:16px;background:#fff;border:1px solid var(--rule);border-radius:4px}
+ .field-label{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+ .field-value{font-size:14px;color:var(--ink);word-break:break-word}
+ .field-value.empty{color:var(--faint);font-style:italic}
+ .section-title{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink);margin:32px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--rule-s)}
+</style></head>
+<body><div class="wrap">
+ <nav class="nav">
+   <a href="/">Activities</a>
+   <a href="/shoes">Shoes</a>
+ </nav>
+ <header class="top">
+   <div>
+     <div class="mark">
+       {{ activity.get('Activity Name', 'Untitled Activity') }}
+       <small>{{ activity.get('Activity Type', '—') }} · {{ activity.get('Activity Date', '—') }}</small>
+     </div>
+     {% if activity.get('Activity ID') %}
+     <a href="https://www.strava.com/activities/{{ activity['Activity ID'] }}" target="_blank" rel="noopener" class="strava-link">View on Strava →</a>
+     {% endif %}
+   </div>
+ </header>
+
+ <div class="section-title">All Activity Data</div>
+ <div class="field-grid">
+   {% for key, value in activity.items() %}
+     {% if key != 'parsed_date' %}
+     <div class="field">
+       <div class="field-label">{{ key }}</div>
+       <div class="field-value{% if not value or value.strip() == '' %} empty{% endif %}">
+         {{ value if value and value.strip() != '' else '—' }}
+       </div>
+     </div>
+     {% endif %}
+   {% endfor %}
+ </div>
+</div>
 </body></html>
 """
